@@ -7,16 +7,14 @@ const User = require('./models/User'); // Adjust path
 require('dotenv').config();
 const { CloudinaryStorage } = require('multer-storage-cloudinary'); 
 const cloudinary = require('./CloudinaryConfig'); // Ensure this file exists
+const bookRoutes = require('./routes/BookUpload');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 
 // Admin credentials
-const  ADMIN_CREDENTIALS = {
-  email: 'admin@hblibrary.com',
-  password: 'admin123',
-};
+
 
 
 const multer = require('multer');
@@ -101,24 +99,7 @@ router.post('/login', async (req, res) => {
     });
 
     // Check for admin credentials
-    if (email.toLowerCase() === ADMIN_CREDENTIALS.email && 
-    password === ADMIN_CREDENTIALS.password) {
-    const token = jwt.sign(
-    { 
-      id: 'admin',
-      role: 'admin',
-      permissions: ['upload_books', 'manage_books']
-    }, 
-    process.env.JWT_SECRET,
-    { expiresIn: '24h' }
-  );
-
-  return res.status(200).json({
-    message: 'Admin login successful',
-    token,
-    isAdmin: true
-  });
-}
+   
 
 
 
@@ -243,7 +224,7 @@ router.put('/user', authenticate, async (req, res) => {
 
 // Use router
 app.use('/api/auth', router);
-app.use('/api/upload-book', router);
+app.use('/api/upload-book', bookRoutes);
 
 // Database connection
 mongoose.connect( 'mongodb+srv://promesserukundo:papa32.ruru@hb-cluster.t9u7h.mongodb.net/Hb-library?retryWrites=true&w=majority&appName=hb-cluster'

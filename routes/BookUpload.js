@@ -2,7 +2,8 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const Book = require('./models/Book');
+const Book = require('../models/Book');
+const user = require('../models/User');
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -35,24 +36,68 @@ const upload = multer({
 });
 
 const requireAdmin = (req, res, next) => {
-  try {
-    const token = req.header('Authorization').replace('Bearer ', '');
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
-    if (decoded.role !== 'admin') {
+  if (!req.user) {
+      return res.status(401).json({ message: 'Authentication required' });
+  }
+
+  if (req.user.role !== 'admin') {
       return res.status(403).json({ message: 'Admin access required' });
+  }
+
+  next();
+};
+
+
+
+// 2. Backend middleware/auth.js - Add debugging
+const authenticateToken = async (req, res, next) => {
+  try {
+    console.log('Headers received:', req.headers); // Debug log
+
+    const authHeader = req.headers.authorization;
+    console.log('Auth header:', authHeader); // Debug log
+
+    if (!authHeader?.startsWith('Bearer ')) {
+      console.log('No Bearer token found'); // Debug log
+      return res.status(401).json({ message: 'No token provided' });
     }
-    
-    req.userId = decoded.id;
+
+    const token = authHeader.split(' ')[1];
+    console.log('Token extracted:', token); // Debug log
+
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET || 'a8d9b5f4f7@J9#6l3o1Yw$Tp9Z!7kX2Lm6C^uE8v3ZgM7h5K4Xz0hD9aM1P'
+    );
+    console.log('Decoded token:', decoded); // Debug log
+
+    // Fetch user from database to ensure they still exist and have admin rights
+    const user = await User.findById(decoded.id);
+    if (!user) {
+      console.log('User not found in database'); // Debug log
+      return res.status(401).json({ message: 'User not found' });
+    }
+
+    req.user = {
+      id: user._id,
+      role: user.role
+    };
+    console.log('User set in request:', req.user); // Debug log
+
     next();
   } catch (error) {
-    res.status(401).json({ message: 'Unauthorized' });
+    console.error('Token verification error:', error);
+    return res.status(403).json({ message: 'Invalid token' });
   }
 };
 
-const router = express.Router();
 
-router.post('/upload-book', authenticate, upload.single('coverImage'), async (req, res) => {
+
+
+const router = express.Router();
+router.post('/', requireAdmin, authenticateToken, upload.single('coverImage'), async (req, res) => {
+  console.log('Request reached route handler'); // Debug log
+    console.log('User in request:', req.user); // Debug log
   try {
     const chapters = JSON.parse(req.body.chapters);
     if (!chapters || !chapters.length) {
@@ -99,6 +144,7 @@ router.post('/upload-book', authenticate, upload.single('coverImage'), async (re
     });
 
   } catch (error) {
+    console.error('Book creation error:', error);
     res.status(500).json({ 
       message: 'Error creating book', 
       error: error.message 
@@ -106,7 +152,8 @@ router.post('/upload-book', authenticate, upload.single('coverImage'), async (re
   }
 });
 
-router.get('/books', async (req, res) => {
+// Update these routes to be relative to the mounted path
+router.get('/list', async (req, res) => {
   try {
     const books = await Book.find()
       .select('-chapters.content')
@@ -117,7 +164,7 @@ router.get('/books', async (req, res) => {
   }
 });
 
-router.get('/books/:id', async (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
     const book = await Book.findById(req.params.id);
     if (!book) {

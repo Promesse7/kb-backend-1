@@ -1,5 +1,4 @@
 const mongoose = require('mongoose');
-const mongoose = require('mongoose');
 
 const chapterSchema = new mongoose.Schema({
   title: {

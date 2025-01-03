@@ -15,8 +15,8 @@ const createAdminUser = async () => {
     // Create new admin user
     const adminUser = new User({
       name: 'Admin User',
-      email: process.env.ADMIN_EMAIL || 'admin@hblirary.com',
-      password: process.env.ADMIN_PASSWORD || 'admin123!',
+      email:'admin@hblirary.com',
+      password:'admin123',
       role: 'admin',
       notificationSettings: {
         newReleases: true,
