@@ -3,19 +3,16 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const User = require('./models/User'); // Adjust path
+const User = require('./models/User'); 
 require('dotenv').config();
 const { CloudinaryStorage } = require('multer-storage-cloudinary'); 
 const cloudinary = require('./CloudinaryConfig'); // Ensure this file exists
 const bookRoutes = require('./routes/BookUpload');
+const bookRoute = require('./routes/BookRoutes');
+
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-
-
-// Admin credentials
-
-
 
 const multer = require('multer');
 const storage = new CloudinaryStorage({ 
@@ -77,10 +74,14 @@ router.post('/register', async (req, res) => {
       storedHash: user.password
     });
 
-    // Generate JWT token
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: '1h',
-    });
+     const token = jwt.sign(
+                { 
+                    id: user._id,
+                    role: user.role // Include role in token
+                }, 
+             'a8d9b5f4f7@J9#6l3o1Yw$Tp9Z!7kX2Lm6C^uE8v3ZgM7h5K4Xz0hD9aM1P',
+                { expiresIn: '1h' }
+            );
 
     // Send response with token
     res.status(201).json({ message: 'User registered successfully', token });
@@ -93,42 +94,32 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
-    console.log('Login attempt details:', {
-      email: email.toLowerCase(),
-      providedPassword: password,  // Only log during debugging
-    });
-
-    // Check for admin credentials
    
-
-
-
-
     const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) {
       console.log('User not found');
       return res.status(400).json({ message: 'Invalid email or password' });
     }
 
-    console.log('Found user:', {
-      email: user.email,
-      storedHash: user.password
-    });
+   
 
     const isMatch = await bcrypt.compare(password, user.password);
-    console.log('Password comparison:', {
-      providedPassword: password,  // Only log during debugging
-      passwordMatch: isMatch
-    });
+   
 
     if (!isMatch) {
       return res.status(400).json({ message: 'Invalid password' });
     }
 
-    // Use the same JWT secret as registration
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: '1h',
-    });
+     const token = jwt.sign(
+                { 
+                    id: user._id,
+                    role: user.role // Include role in token
+                }, 
+          'a8d9b5f4f7@J9#6l3o1Yw$Tp9Z!7kX2Lm6C^uE8v3ZgM7h5K4Xz0hD9aM1P',
+                { expiresIn: '1h' }
+            );
+    console.log('Generated token:', token);
+    
 
     res.status(200).json({ message: 'Login successful', token });
   } catch (error) {
@@ -140,29 +131,52 @@ router.post('/login', async (req, res) => {
 
 
 // Middleware to verify JWT
-const authenticate = (req, res, next) => {
-  const token = req.header('Authorization').replace('Bearer ', '');
+const authenticateToken = async (req, res, next) => {
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.userId = decoded.id;
-    console.log('Authenticated User ID:', req.userId); // Debugging line
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('No Bearer token found');
+      return res.status(401).json({ message: 'No token provided' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    console.log('Book upload - Token received:', token);
+
+    const decoded = jwt.verify(token, 'a8d9b5f4f7@J9#6l3o1Yw$Tp9Z!7kX2Lm6C^uE8v3ZgM7h5K4Xz0hD9aM1P');
+    console.log('Book upload - Decoded token:', decoded);
+
+    const user = await User.findById(decoded.id);
+    if (!user) {
+      console.log('Book upload - User not found in database');
+      return res.status(401).json({ message: 'User not found' });
+    }
+
+    // Set both id and _id to ensure compatibility
+    req.user = {
+      id: user._id,
+      _id: user._id,
+      role: user.role
+    };
+    console.log('Book upload - User set in request:', req.user);
+
     next();
   } catch (error) {
-    res.status(401).json({ message: 'Unauthorized' });
+    console.error('Book upload - Token verification error:', error);
+    return res.status(403).json({ message: 'Invalid token', error: error.message });
   }
 };
 
 
-
 // Fetch User Route
-router.get('/user', authenticate, async (req, res) => {
+router.get('/user', authenticateToken, async (req, res) => {
   try {
-    const userId = req.userId;
-    console.log('Fetching profile for User ID:', userId); // Debugging line
+    // Change from req.user._id to req.user.id since that's how we set it in the middleware
+    const userId = req.user.id;
+    console.log('Fetching profile for User ID:', userId);
 
     const user = await User.findById(userId);
     if (!user) {
-      console.error('User not found for ID:', userId); // Debugging line
+      console.error('User not found for ID:', userId);
       return res.status(404).json({ message: 'User not found' });
     }
     
@@ -173,18 +187,17 @@ router.get('/user', authenticate, async (req, res) => {
   }
 });
 
-
-// Avatar upload route
-router.post('/user/avatar', authenticate, upload.single('avatar'), async (req, res) => {
+// Update the avatar upload route as well
+router.post('/user/avatar', authenticateToken, upload.single('avatar'), async (req, res) => {
   try {
-    const userId = req.userId;
-    console.log('User ID:', userId); // Debugging line
+    const userId = req.user.id;  // Changed from _id to id
+    console.log('User ID:', userId);
     const avatarUrl = req.file.path;
-    console.log('Uploaded Avatar URL:', avatarUrl); // Debugging line
+    console.log('Uploaded Avatar URL:', avatarUrl);
 
     const user = await User.findByIdAndUpdate(userId, { avatar: avatarUrl }, { new: true });
     if (!user) {
-      console.error('User not found for ID:', userId); // Debugging line
+      console.error('User not found for ID:', userId);
       return res.status(404).json({ message: 'User not found' });
     }
 
@@ -195,22 +208,22 @@ router.post('/user/avatar', authenticate, upload.single('avatar'), async (req, r
   }
 });
 
-// Update user profile
-router.put('/user', authenticate, async (req, res) => {
+
+router.put('/user', authenticateToken, async (req, res) => {
   try {
-    const userId = req.userId;
-    console.log('Updating profile for User ID:', userId); // Debugging line
+    const userId = req.user.id;  // Changed from _id to id
+    console.log('Updating profile for User ID:', userId);
 
     const updatedData = req.body;
-    console.log('Updated Data:', updatedData); // Debugging line
+    console.log('Updated Data:', updatedData);
 
     const user = await User.findByIdAndUpdate(userId, updatedData, { new: true });
     if (!user) {
-      console.error('User not found for ID:', userId); // Debugging line
+      console.error('User not found for ID:', userId);
       return res.status(404).json({ message: 'User not found' });
     }
 
-    console.log('Updated User:', user); // Debugging line
+    console.log('Updated User:', user);
     res.json(user);
   } catch (error) {
     console.error('Error updating profile:', error);
@@ -221,10 +234,10 @@ router.put('/user', authenticate, async (req, res) => {
 
 
 
-
 // Use router
 app.use('/api/auth', router);
 app.use('/api/upload-book', bookRoutes);
+app.use('/api/books', bookRoute);
 
 // Database connection
 mongoose.connect( 'mongodb+srv://promesserukundo:papa32.ruru@hb-cluster.t9u7h.mongodb.net/Hb-library?retryWrites=true&w=majority&appName=hb-cluster'

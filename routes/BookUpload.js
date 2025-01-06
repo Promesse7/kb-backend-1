@@ -1,117 +1,74 @@
 const express = require('express');
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
+const jwt = require('jsonwebtoken');
 const Book = require('../models/Book');
-const user = require('../models/User');
+const User = require('../models/User');
+const multer = require('multer');
+const upload = multer();
+const router = express.Router();
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadDir = 'uploads/covers';
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
-const fileFilter = (req, file, cb) => {
-  if (file.mimetype.startsWith('image/')) {
-    cb(null, true);
-  } else {
-    cb(new Error('Only image files are allowed!'), false);
-  }
-};
-
-const upload = multer({
-  storage: storage,
-  fileFilter: fileFilter,
-  limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB limit
-  }
-});
-
-const requireAdmin = (req, res, next) => {
-  if (!req.user) {
-      return res.status(401).json({ message: 'Authentication required' });
-  }
-
-  if (req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Admin access required' });
-  }
-
-  next();
-};
-
-
-
-// 2. Backend middleware/auth.js - Add debugging
 const authenticateToken = async (req, res, next) => {
   try {
-    console.log('Headers received:', req.headers); // Debug log
-
     const authHeader = req.headers.authorization;
-    console.log('Auth header:', authHeader); // Debug log
-
-    if (!authHeader?.startsWith('Bearer ')) {
-      console.log('No Bearer token found'); // Debug log
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('No Bearer token found');
       return res.status(401).json({ message: 'No token provided' });
     }
 
     const token = authHeader.split(' ')[1];
-    console.log('Token extracted:', token); // Debug log
+    console.log('Book upload - Token received:', token);
 
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET || 'a8d9b5f4f7@J9#6l3o1Yw$Tp9Z!7kX2Lm6C^uE8v3ZgM7h5K4Xz0hD9aM1P'
-    );
-    console.log('Decoded token:', decoded); // Debug log
+    const decoded = jwt.verify(token, 'a8d9b5f4f7@J9#6l3o1Yw$Tp9Z!7kX2Lm6C^uE8v3ZgM7h5K4Xz0hD9aM1P');
+    console.log('Book upload - Decoded token:', decoded);
 
-    // Fetch user from database to ensure they still exist and have admin rights
     const user = await User.findById(decoded.id);
     if (!user) {
-      console.log('User not found in database'); // Debug log
+      console.log('Book upload - User not found in database');
       return res.status(401).json({ message: 'User not found' });
     }
 
     req.user = {
       id: user._id,
+      _id: user._id,
       role: user.role
     };
-    console.log('User set in request:', req.user); // Debug log
+    console.log('Book upload - User set in request:', req.user);
 
     next();
   } catch (error) {
-    console.error('Token verification error:', error);
-    return res.status(403).json({ message: 'Invalid token' });
+    console.error('Book upload - Token verification error:', error);
+    return res.status(403).json({ message: 'Invalid token', error: error.message });
   }
 };
 
 
 
-
-const router = express.Router();
-router.post('/', requireAdmin, authenticateToken, upload.single('coverImage'), async (req, res) => {
-  console.log('Request reached route handler'); // Debug log
-    console.log('User in request:', req.user); // Debug log
+// Updated route without multer middleware since we're expecting a URL
+router.post('/', authenticateToken, upload.none(), async (req, res) => {
+  console.log('Request reached route handler');
+  console.log('User in request:', req.user);
+  
   try {
-    const chapters = JSON.parse(req.body.chapters);
-    if (!chapters || !chapters.length) {
-      return res.status(400).json({ message: 'No chapters provided' });
+    // Log the incoming data for debugging
+    console.log('Received form data:', {
+      title: req.body.title,
+      author: req.body.author,
+      chaptersRaw: req.body.chapters
+    });
+
+    // Safely parse chapters
+    let chapters;
+    try {
+      chapters = JSON.parse(req.body.chapters);
+    } catch (parseError) {
+      console.error('Chapters parsing error:', parseError);
+      return res.status(400).json({ 
+        message: 'Invalid chapters data',
+        error: parseError.message 
+      });
     }
 
-    let coverImageUrl = null;
-    if (req.file) {
-      const b64 = Buffer.from(req.file.buffer).toString('base64');
-      const dataURI = `data:${req.file.mimetype};base64,${b64}`;
-      const uploadResponse = await cloudinary.uploader.upload(dataURI, {
-        folder: 'book-covers'
-      });
-      coverImageUrl = uploadResponse.secure_url;
+    if (!chapters || !Array.isArray(chapters) || chapters.length === 0) {
+      return res.status(400).json({ message: 'No valid chapters provided' });
     }
 
     const book = new Book({
@@ -128,8 +85,8 @@ router.post('/', requireAdmin, authenticateToken, upload.single('coverImage'), a
         content: chapter.content,
         chapterNumber: chapter.chapterNumber
       })),
-      coverImage: coverImageUrl,
-      uploadedBy: req.userId
+      coverImage: req.body.coverImage,
+      uploadedBy: req.user.id
     });
 
     await book.save();
@@ -139,7 +96,7 @@ router.post('/', requireAdmin, authenticateToken, upload.single('coverImage'), a
       book: {
         id: book._id,
         title: book.title,
-        coverImage: coverImageUrl
+        coverImage: book.coverImage
       }
     });
 
@@ -152,7 +109,6 @@ router.post('/', requireAdmin, authenticateToken, upload.single('coverImage'), a
   }
 });
 
-// Update these routes to be relative to the mounted path
 router.get('/list', async (req, res) => {
   try {
     const books = await Book.find()

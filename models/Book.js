@@ -9,10 +9,6 @@ const chapterSchema = new mongoose.Schema({
   content: {
     type: String,
     required: [true, 'Chapter content is required']
-  },
-  order: {
-    type: Number,
-    required: true
   }
 });
 
@@ -46,7 +42,10 @@ const bookSchema = new mongoose.Schema({
   category: {
     type: String,
     required: [true, 'Category is required'],
-    enum: ['Fiction', 'Non-Fiction', 'Science', 'Technology', 'History', 'Biography', 'Other']
+    enum: [
+      'Fiction', 'Non-Fiction', 'Science', 'Technology',  'Biography',
+      'Romance', 'Business', 'Self-Help', 'History',
+    'Arts', 'Poetry', 'Drama',  'Other']
   },
   publicationYear: {
     type: Number,
@@ -64,11 +63,7 @@ const bookSchema = new mongoose.Schema({
     required: [true, 'Language is required'],
     default: 'English'
   },
-  pages: {
-    type: Number,
-    required: [true, 'Number of pages is required'],
-    min: 1
-  },
+ 
   availability: {
     type: Boolean,
     default: true
