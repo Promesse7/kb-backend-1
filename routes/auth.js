@@ -25,7 +25,7 @@ router.post('/register', async (req, res) => {
                 role: user.role // Include role in token
             }, 
             process.env.JWT_SECRET || 'a8d9b5f4f7@J9#6l3o1Yw$Tp9Z!7kX2Lm6C^uE8v3ZgM7h5K4Xz0hD9aM1P',
-            { expiresIn: '1h' }
+            { expiresIn: '10h' }
         );
 
         res.status(201).json({ 
@@ -64,7 +64,7 @@ router.post('/login', async (req, res) => {
                 role: user.role // Include role in token
             }, 
             process.env.JWT_SECRET || 'a8d9b5f4f7@J9#6l3o1Yw$Tp9Z!7kX2Lm6C^uE8v3ZgM7h5K4Xz0hD9aM1P',
-            { expiresIn: '1h' }
+            { expiresIn: '10h' }
         );
 
         res.status(200).json({ 

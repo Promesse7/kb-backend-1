@@ -28,9 +28,13 @@ const upload = multer({ storage });
 
 // Enable CORS
 const corsOptions = {
-  origin: 'http://localhost:3000', // Allow requests only from your frontend
-  credentials: true,               // Allow cookies and credentials
+  origin: process.env.NODE_ENV === "development"
+    ? "http://localhost:3000"            // Local frontend during development
+    : "https://hb-library.vercel.app", // Deployed frontend in production
+  credentials: true,
 };
+
+
 app.use(cors(corsOptions));
 
 app.use(express.json());
@@ -80,7 +84,7 @@ router.post('/register', async (req, res) => {
                     role: user.role // Include role in token
                 }, 
              'a8d9b5f4f7@J9#6l3o1Yw$Tp9Z!7kX2Lm6C^uE8v3ZgM7h5K4Xz0hD9aM1P',
-                { expiresIn: '1h' }
+                { expiresIn: '10h' }
             );
 
     // Send response with token
@@ -116,7 +120,7 @@ router.post('/login', async (req, res) => {
                     role: user.role // Include role in token
                 }, 
           'a8d9b5f4f7@J9#6l3o1Yw$Tp9Z!7kX2Lm6C^uE8v3ZgM7h5K4Xz0hD9aM1P',
-                { expiresIn: '1h' }
+                { expiresIn: '10h' }
             );
     console.log('Generated token:', token);
     
