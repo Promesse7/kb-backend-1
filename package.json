@@ -2,13 +2,14 @@
   "name": "backend",
   "version": "1.0.0",
   "license": "ISC",
-  "author": "",
+  "author": "Promesse Rukundo",
   "type": "commonjs",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js",
-    "build": "react-scripts build"
+    "dev": "nodemon server.js",
+    "build": "echo 'No build process for backend server'"
   },
   "dependencies": {
     "axios": "^1.7.9",
@@ -20,8 +21,7 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.9.2",
     "multer": "^1.4.5-lts.1",
-    "multer-storage-cloudinary": "^4.0.0",
-    "react-scripts": "^5.0.1"
+    "multer-storage-cloudinary": "^4.0.0"
   },
   "directories": {
     "test": "tests"
