@@ -28,9 +28,10 @@ const upload = multer({ storage });
 
 // Enable CORS
 const corsOptions = {
-  origin: process.env.NODE_ENV === "development"
-    ? "http://localhost:3000"            // Local frontend during development
-    : "https://hb-library.vercel.app", // Deployed frontend in production
+  origin: [
+    "http://localhost:3000", // Development frontend
+    "https://hb-library.vercel.app", // Production frontend
+  ],
   credentials: true,
 };
 
