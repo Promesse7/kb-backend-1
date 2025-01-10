@@ -9,9 +9,13 @@ const app = express();
 
 // Cors configuration
 const corsOptions = {
-  origin: 'http://localhost:3000',
+  origin: [
+    "http://localhost:3000", // Development frontend
+    "https://hb-library.vercel.app", // Production frontend
+  ],
   credentials: true,
 };
+
 app.use(cors(corsOptions));
 app.use(express.json());
 
