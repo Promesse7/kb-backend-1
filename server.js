@@ -26,18 +26,29 @@ cloudinary: cloudinary, params: {
 const upload = multer({ storage });
 
 
-// Enable CORS
+
+// Configure CORS
 const corsOptions = {
   origin: [
     "http://localhost:3000", // Development frontend
     "https://hb-library.vercel.app", // Production frontend
   ],
-  credentials: true,
+  credentials: true, // Allow credentials (cookies, authorization headers)
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Allowed HTTP methods
+  allowedHeaders: ['Content-Type', 'Authorization'], // Allowed headers
 };
 
-
+// Enable CORS
 app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // Handle preflight requests
 
+// Middleware for logging requests (for debugging)
+app.use((req, res, next) => {
+  console.log(`Incoming request: ${req.method} ${req.url} from origin: ${req.headers.origin}`);
+  next();
+});
+
+// Middleware for parsing JSON
 app.use(express.json());
 
 // Example route
