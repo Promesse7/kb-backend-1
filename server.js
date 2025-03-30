@@ -29,10 +29,7 @@ const upload = multer({ storage });
 
 // Configure CORS
 const corsOptions = {
-  origin: [
-    "http://localhost:3000", // Development frontend
-    "https://hb-library.vercel.app", // Production frontend
-  ],
+ origin: "*",
   credentials: true, // Allow credentials (cookies, authorization headers)
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Allowed HTTP methods
   allowedHeaders: ['Content-Type', 'Authorization'], // Allowed headers
