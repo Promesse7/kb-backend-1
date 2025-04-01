@@ -52,7 +52,7 @@ const authenticateToken = async (req, res, next) => {
 // Fetch books route
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const books = await Book.find().select('title author coverImage'); // Modify as needed
+    const books = await Book.find(); // Fetches all fields
     res.json(books);
   } catch (error) {
     console.error('Error fetching books:', error);
