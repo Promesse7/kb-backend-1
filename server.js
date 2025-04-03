@@ -27,27 +27,39 @@ const upload = multer({ storage });
 
 
 
-// Configure CORS
+// Allowed origins
+const allowedOrigins = [
+  "http://localhost:3000",
+  "https://hb-library.vercel.app",
+];
+
 const corsOptions = {
   origin: (origin, callback) => {
-    const allowedOrigins = [
-      "http://localhost:3000",
-      "https://hb-library.vercel.app",
-    ];
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
       callback(new Error("Not allowed by CORS"));
     }
   },
-  credentials: true,
+  credentials: true, // Allow cookies/auth headers
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
   allowedHeaders: ["Content-Type", "Authorization"],
 };
 
-
 app.use(cors(corsOptions));
-app.options("*", cors(corsOptions)); // Ensure preflight requests are handled
+
+// Explicitly handle preflight (OPTIONS) requests
+app.options("*", (req, res) => {
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.header("Access-Control-Allow-Origin", origin);
+    res.header("Access-Control-Allow-Methods", "GET,HEAD,PUT,PATCH,POST,DELETE");
+    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.header("Access-Control-Allow-Credentials", "true");
+    return res.status(200).end();
+  }
+  res.status(403).json({ message: "Not allowed by CORS" });
+}); // Ensure preflight requests are handled
 
 
 // Middleware for logging requests (for debugging)
