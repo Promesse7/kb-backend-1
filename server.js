@@ -29,7 +29,6 @@ const upload = multer({ storage });
 
 // Configure CORS
 const corsOptions = {
-<<<<<<< HEAD
   origin: (origin, callback) => {
     const allowedOrigins = [
       "http://localhost:3000",
@@ -44,13 +43,8 @@ const corsOptions = {
   credentials: true,
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
   allowedHeaders: ["Content-Type", "Authorization"],
-=======
- origin: "*",
-  credentials: true, // Allow credentials (cookies, authorization headers)
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Allowed HTTP methods
-  allowedHeaders: ['Content-Type', 'Authorization'], // Allowed headers
->>>>>>> 64bc0458126afef7ce14f9c11998c7302bf44ff2
 };
+
 
 app.use(cors(corsOptions));
 app.options("*", cors(corsOptions)); // Ensure preflight requests are handled
