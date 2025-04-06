@@ -60,4 +60,22 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
+
+router.get('/:id', async (req, res) => {
+  const bookId = req.params.id;  // No need to clean up if it's already a valid ID
+  console.log('Fetching book with ID:', bookId);
+  
+  try {
+    const book = await Book.findById(bookId);
+    if (!book) {
+      return res.status(404).json({ message: 'Book not found' });
+    }
+    res.json(book);
+  } catch (error) {
+    console.error('Error fetching book:', error);  // Log full error for debugging
+    res.status(500).json({ message: 'Error fetching book', error: error.message });
+  }
+});
+
+
 module.exports = router;
