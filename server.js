@@ -9,11 +9,16 @@ const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const cloudinary = require('./CloudinaryConfig'); // Ensure this file exists
 const bookRoutes = require('./routes/BookUpload');
 const bookRoute = require('./routes/BookRoutes');
-
+const { Server } = require('socket.io');
+const http = require('http');
 
 const app = express();
-const PORT = process.env.PORT || 5000;
 
+// ========== Allowed Origins ==========
+const allowedOrigins = [
+  "http://localhost:3000",
+  "https://hb-library.vercel.app",
+];
 const multer = require('multer');
 const storage = new CloudinaryStorage({ 
 cloudinary: cloudinary, params: {
@@ -22,17 +27,31 @@ cloudinary: cloudinary, params: {
     public_id: (req, file) => `${Date.now()}-${file.originalname}`, 
     }, 
   });
+  // ========== Socket.IO ==========
+const io = new Server(http, {
+  cors: {
+    origin: allowedOrigins,
+    methods: ["GET", "POST"],
+    credentials: true,
+  }
+});
 
-const upload = multer({ storage });
+io.on('connection', (socket) => {
+  console.log('Socket connected:', socket.id);
+});
+
+// Optional: attach io to app for use in routes
+app.set('io', io);
+
+// ========== Server Listen ==========
+const PORT = process.env.PORT || 5000;
+http.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
 
 
 
-// Allowed origins
-const allowedOrigins = [
-  "http://localhost:3000",
-  "https://hb-library.vercel.app",
-];
-
+// ========== CORS Options ==========
 const corsOptions = {
   origin: (origin, callback) => {
     if (!origin || allowedOrigins.includes(origin)) {
@@ -41,14 +60,14 @@ const corsOptions = {
       callback(new Error("Not allowed by CORS"));
     }
   },
-  credentials: true, // Allow cookies/auth headers
+  credentials: true,
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
   allowedHeaders: ["Content-Type", "Authorization"],
 };
 
 app.use(cors(corsOptions));
 
-// Explicitly handle preflight (OPTIONS) requests
+// ========== Preflight Request Handler ==========
 app.options("*", (req, res) => {
   const origin = req.headers.origin;
   if (allowedOrigins.includes(origin)) {
@@ -59,7 +78,11 @@ app.options("*", (req, res) => {
     return res.status(200).end();
   }
   res.status(403).json({ message: "Not allowed by CORS" });
-}); // Ensure preflight requests are handled
+});
+
+// ========== Middleware ==========
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 
 // Middleware for logging requests (for debugging)
@@ -280,7 +303,4 @@ mongoose.connect( 'mongodb+srv://promesserukundo:papa32.ruru@hb-cluster.t9u7h.mo
   ).then(() => console.log('MongoDB connected'))
   .catch((err) => console.error('Database connection error:', err));
 
-// Start Server
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+

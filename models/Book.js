@@ -68,18 +68,41 @@ const bookSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
-  rating: {
-    averageRating: {
-      type: Number,
-      default: 0,
-      min: 0,
-      max: 5
-    },
-    totalRatings: {
-      type: Number,
-      default: 0
-    }
+  favorites: {
+    type: [mongoose.Schema.Types.ObjectId], // Array of userIds who have marked the book as favorite
+    ref: 'User'
   },
+  likes: {
+    type: [mongoose.Schema.Types.ObjectId], // Array of userIds who liked the book
+    ref: 'User'
+  },
+  tags: {
+    type: [String],  // Array of tags, e.g., ["technology", "AI", "education"]
+    required: false,
+    trim: true
+  },
+  ratings: [
+    {
+      userId: { 
+        type: mongoose.Schema.Types.ObjectId, 
+        ref: 'User' 
+      },
+      rating: {
+        type: Number,
+        min: 0,
+        max: 5
+      },
+      review: {
+        type: String,
+        trim: true
+      },
+      createdAt: {
+        type: Date,
+        default: Date.now
+      }
+    }
+  ],
+  
   downloads: {
     type: Number,
     default: 0

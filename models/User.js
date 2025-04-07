@@ -44,6 +44,22 @@ const userSchema = new mongoose.Schema({
         type: String,
         default: 'en',
     },
+
+      likedBooks: {
+        type: [mongoose.Schema.Types.ObjectId], 
+        ref: 'Book'
+      },
+      favoriteBooks: {
+        type: [mongoose.Schema.Types.ObjectId], 
+        ref: 'Book'
+      },
+      ratedBooks: [
+        {
+          bookId: { type: mongoose.Schema.Types.ObjectId, ref: 'Book' },
+          rating: { type: Number, min: 0, max: 5 },
+          review: { type: String, trim: true }
+        }
+      ],
     avatar: { type: String, default: '' },
     role: {
         type: String,
