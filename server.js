@@ -27,6 +27,8 @@ cloudinary: cloudinary, params: {
     public_id: (req, file) => `${Date.now()}-${file.originalname}`, 
     }, 
   });
+  const upload = multer({ storage: storage });
+  
   // ========== Socket.IO ==========
 const io = new Server(http, {
   cors: {
@@ -43,11 +45,16 @@ io.on('connection', (socket) => {
 // Optional: attach io to app for use in routes
 app.set('io', io);
 
-// ========== Server Listen ==========
+const server = http.createServer(app);
+
+// For Socket.IO, pass the server object here
+// const io = require('socket.io')(server);
+
 const PORT = process.env.PORT || 5000;
-http.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
 
 
 
