@@ -45,7 +45,7 @@ const bookSchema = new mongoose.Schema({
     enum: [
       'Fiction', 'Non-Fiction', 'Science', 'Technology',  'Biography',
       'Romance', 'Business', 'Self-Help', 'History',
-    'Arts', 'Poetry', 'Drama',  'Other']
+    'Arts', 'Poetry', 'Drama', 'Other']
   },
   publicationYear: {
     type: Number,

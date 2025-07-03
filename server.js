@@ -11,6 +11,8 @@ const bookRoutes = require('./routes/BookUpload');
 const bookRoute = require('./routes/BookRoutes');
 const { Server } = require('socket.io');
 const http = require('http');
+const paypackSecret = process.env.PAYPACK_SECRET_KEY;
+const { UserBookAccess } = require('./models/UserBookAccessSchema'); // import the model
 
 const app = express();
 
@@ -18,6 +20,7 @@ const app = express();
 const allowedOrigins = [
   "http://localhost:3000",
   "https://hb-library.vercel.app",
+  "https://novtok.vercel.app",
 ];
 const multer = require('multer');
 const storage = new CloudinaryStorage({ 
@@ -46,9 +49,6 @@ io.on('connection', (socket) => {
 app.set('io', io);
 
 const server = http.createServer(app);
-
-// For Socket.IO, pass the server object here
-// const io = require('socket.io')(server);
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
@@ -297,7 +297,76 @@ router.put('/user', authenticateToken, async (req, res) => {
   }
 });
 
+// ============== Payment with PayPack =================== \\
 
+app.post('/api/paypack/initiate', async (req, res) => {
+  const { bookId, amount } = req.body;
+  const userId = req.user.id;
+
+  if (!bookId || !amount) return res.status(400).json({ error: 'Missing bookId or amount' });
+
+  try {
+    // Create payment session with Paypack (example URL and payload — adapt to their API)
+    const paypackResponse = await axios.post('https://api.paypack.rw/payments', {
+      amount,
+      currency: 'RWF',
+      customer_id: userId,  // or any customer identifier you track
+      description: `Purchase Book ${bookId}`,
+      callback_url: 'https://yourapp.com/api/paypack/webhook', // Your webhook URL
+      success_url: `https://yourapp.com/books/${bookId}/read`, // Where to redirect after payment success
+      cancel_url: `https://yourapp.com/books/${bookId}`,       // Where to redirect if payment cancelled
+    }, {
+      headers: {
+        Authorization: `Bearer ${paypackSecret}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    res.json({ paymentUrl: paypackResponse.data.payment_url });
+  } catch (err) {
+    console.error('Paypack initiation error:', err.response?.data || err.message);
+    res.status(500).json({ error: 'Failed to initiate payment' });
+  }
+});
+
+
+app.post('/api/paypack/webhook', async (req, res) => {
+  const paymentData = req.body;
+
+  // TODO: verify signature or authenticity based on Paypack docs
+
+  if (paymentData.status === 'success' && paymentData.customer_id && paymentData.description) {
+    try {
+      // Parse bookId from description or you can use metadata fields if available
+      const bookId = paymentData.description.split(' ').pop();
+      const userId = paymentData.customer_id;
+
+      // Save access to DB
+      await UserBookAccess.create({
+        userId,
+        bookId,
+        paidAt: new Date(),
+      });
+
+      console.log(`Payment success for user ${userId}, book ${bookId}`);
+
+      res.status(200).send('OK');
+    } catch (err) {
+      console.error('Webhook processing error:', err);
+      res.status(500).send('Failed');
+    }
+  } else {
+    res.status(400).send('Invalid payment status');
+  }
+});
+app.get('/api/books/:bookId/access', async (req, res) => {
+  const userId = req.user.id;
+  const bookId = req.params.bookId;
+
+  const access = await UserBookAccess.findOne({ userId, bookId });
+
+  res.json({ hasAccess: !!access });
+});
 
 
 // Use router
