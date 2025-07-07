@@ -9,7 +9,6 @@ const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const cloudinary = require('./CloudinaryConfig'); // Ensure this file exists
 const bookRoutes = require('./routes/BookUpload');
 const bookRoute = require('./routes/BookRoutes');
-const { Server } = require('socket.io');
 const http = require('http');
 const paypackSecret = process.env.PAYPACK_SECRET_KEY;
 const { UserBookAccess } = require('./models/UserBookAccessSchema'); // import the model
@@ -32,21 +31,8 @@ cloudinary: cloudinary, params: {
   });
   const upload = multer({ storage: storage });
   
-  // ========== Socket.IO ==========
-const io = new Server(http, {
-  cors: {
-    origin: allowedOrigins,
-    methods: ["GET", "POST"],
-    credentials: true,
-  }
-});
 
-io.on('connection', (socket) => {
-  console.log('Socket connected:', socket.id);
-});
 
-// Optional: attach io to app for use in routes
-app.set('io', io);
 
 const server = http.createServer(app);
 
